@@ -16,6 +16,9 @@ from futu import (
 )
 
 
+DEFAULT_MIN_MARKET_CAP = 100_000_000.0
+
+
 def indicator_more(field1, field2, para1=None, para2=None) -> CustomIndicatorFilter:
     filter_item = CustomIndicatorFilter()
     filter_item.stock_field1 = field1
@@ -36,7 +39,11 @@ def simple_min(field, minimum: float) -> SimpleFilter:
     return filter_item
 
 
-def build_filters(min_52w_low_pct: float, max_below_52w_high_pct: float | None) -> list:
+def build_filters(
+    min_52w_low_pct: float,
+    max_below_52w_high_pct: float | None,
+    min_market_cap: float | None,
+) -> list:
     filters = [
         indicator_more(StockField.PRICE, StockField.MA, para2=[50]),
         indicator_more(StockField.MA, StockField.MA, para1=[50], para2=[150]),
@@ -44,6 +51,8 @@ def build_filters(min_52w_low_pct: float, max_below_52w_high_pct: float | None) 
         # FUTU SimpleFilter min/max are inclusive, so nudge above 30 for "more than 30%".
         simple_min(StockField.CUR_PRICE_TO_LOWEST52_WEEKS_RATIO, min_52w_low_pct),
     ]
+    if min_market_cap is not None and min_market_cap > 0:
+        filters.append(simple_min(StockField.MARKET_VAL, min_market_cap))
     if max_below_52w_high_pct is not None:
         filters.append(
             simple_min(
@@ -85,6 +94,7 @@ def fetch_filtered_stocks(
                 ma200 = data.get(("ma", "200", "k_day"))
                 low_ratio = data.get("cur_price_to_lowest52_weeks_ratio")
                 high_ratio = data.get("cur_price_to_highest52_weeks_ratio")
+                market_cap = data.get("market_val")
 
                 estimated_low = (
                     price / (1 + low_ratio / 100)
@@ -106,6 +116,7 @@ def fetch_filtered_stocks(
                         "ma50": ma50,
                         "ma150": ma150,
                         "ma200": ma200,
+                        "market_cap": market_cap,
                         "price_to_52w_low_pct": low_ratio,
                         "price_to_52w_high_pct": high_ratio,
                         "estimated_52w_low": estimated_low,
@@ -117,6 +128,7 @@ def fetch_filtered_stocks(
                         "futu_filter_ma50_gt_ma150": True,
                         "futu_filter_ma150_gt_ma200": True,
                         "futu_filter_gt_30_pct_above_52w_low": True,
+                        "futu_filter_market_cap_gte_min": market_cap is not None,
                         "futu_filter_within_25_pct_of_52w_high": high_ratio is not None,
                     }
                 )
@@ -153,6 +165,15 @@ def parse_args() -> argparse.Namespace:
         default=25,
         help="Require price to be no more than this percent below the 52-week high. Use -1 to disable.",
     )
+    parser.add_argument(
+        "--min-market-cap",
+        type=float,
+        default=DEFAULT_MIN_MARKET_CAP,
+        help=(
+            "Minimum market capitalization for US stocks, in US dollars. "
+            "Default is 100,000,000. Use 0 to disable."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -162,6 +183,7 @@ def main() -> None:
     filters = build_filters(
         min_52w_low_pct=args.min_52w_low_pct,
         max_below_52w_high_pct=max_below_high,
+        min_market_cap=args.min_market_cap,
     )
 
     result = fetch_filtered_stocks(

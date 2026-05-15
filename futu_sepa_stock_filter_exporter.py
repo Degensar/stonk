@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pandas as pd
 from futu import (
+    AccumulateFilter,
     CustomIndicatorFilter,
     KLType,
     Market,
@@ -17,6 +18,8 @@ from futu import (
 
 
 DEFAULT_MIN_MARKET_CAP = 100_000_000.0
+DEFAULT_MIN_AVG_DOLLAR_VOLUME_5D = 10_000_000.0
+AVG_DOLLAR_VOLUME_DAYS = 5
 
 
 def indicator_more(field1, field2, para1=None, para2=None) -> CustomIndicatorFilter:
@@ -39,10 +42,20 @@ def simple_min(field, minimum: float) -> SimpleFilter:
     return filter_item
 
 
+def accumulate_min(field, minimum: float, days: int) -> AccumulateFilter:
+    filter_item = AccumulateFilter()
+    filter_item.stock_field = field
+    filter_item.filter_min = minimum
+    filter_item.days = days
+    filter_item.is_no_filter = False
+    return filter_item
+
+
 def build_filters(
     min_52w_low_pct: float,
     max_below_52w_high_pct: float | None,
     min_market_cap: float | None,
+    min_avg_dollar_volume_5d: float | None,
 ) -> list:
     filters = [
         indicator_more(StockField.PRICE, StockField.MA, para2=[50]),
@@ -53,6 +66,14 @@ def build_filters(
     ]
     if min_market_cap is not None and min_market_cap > 0:
         filters.append(simple_min(StockField.MARKET_VAL, min_market_cap))
+    if min_avg_dollar_volume_5d is not None and min_avg_dollar_volume_5d > 0:
+        filters.append(
+            accumulate_min(
+                StockField.TURNOVER,
+                min_avg_dollar_volume_5d,
+                AVG_DOLLAR_VOLUME_DAYS,
+            )
+        )
     if max_below_52w_high_pct is not None:
         filters.append(
             simple_min(
@@ -95,6 +116,7 @@ def fetch_filtered_stocks(
                 low_ratio = data.get("cur_price_to_lowest52_weeks_ratio")
                 high_ratio = data.get("cur_price_to_highest52_weeks_ratio")
                 market_cap = data.get("market_val")
+                avg_dollar_volume_5d = data.get(("turnover", AVG_DOLLAR_VOLUME_DAYS))
 
                 estimated_low = (
                     price / (1 + low_ratio / 100)
@@ -117,6 +139,7 @@ def fetch_filtered_stocks(
                         "ma150": ma150,
                         "ma200": ma200,
                         "market_cap": market_cap,
+                        "avg_dollar_volume_5d": avg_dollar_volume_5d,
                         "price_to_52w_low_pct": low_ratio,
                         "price_to_52w_high_pct": high_ratio,
                         "estimated_52w_low": estimated_low,
@@ -129,6 +152,7 @@ def fetch_filtered_stocks(
                         "futu_filter_ma150_gt_ma200": True,
                         "futu_filter_gt_30_pct_above_52w_low": True,
                         "futu_filter_market_cap_gte_min": market_cap is not None,
+                        "futu_filter_avg_dollar_volume_5d_gte_min": avg_dollar_volume_5d is not None,
                         "futu_filter_within_25_pct_of_52w_high": high_ratio is not None,
                     }
                 )
@@ -174,6 +198,15 @@ def parse_args() -> argparse.Namespace:
             "Default is 100,000,000. Use 0 to disable."
         ),
     )
+    parser.add_argument(
+        "--min-avg-dollar-volume-5d",
+        type=float,
+        default=DEFAULT_MIN_AVG_DOLLAR_VOLUME_5D,
+        help=(
+            "Minimum average daily dollar volume over the last 5 trading days, "
+            "in US dollars. Default is 10,000,000. Use 0 to disable."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -184,6 +217,7 @@ def main() -> None:
         min_52w_low_pct=args.min_52w_low_pct,
         max_below_52w_high_pct=max_below_high,
         min_market_cap=args.min_market_cap,
+        min_avg_dollar_volume_5d=args.min_avg_dollar_volume_5d,
     )
 
     result = fetch_filtered_stocks(

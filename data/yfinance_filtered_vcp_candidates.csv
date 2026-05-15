@@ -1,0 +1,2 @@
+ticker,close,rs_rank,base_depth_pct,contraction_count,contractions_pct,pivot_price,pivot_distance_pct,avg_dollar_volume,volume_dry_up_ratio,score
+TERN,52.95,99.1,34.2,2,"18.6, 0.7",52.98,0.1,341912435.0,0.37,80.7

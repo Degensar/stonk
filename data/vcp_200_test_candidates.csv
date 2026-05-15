@@ -1,0 +1,5 @@
+ticker,close,rs_rank,base_depth_pct,contraction_count,contractions_pct,pivot_price,pivot_distance_pct,avg_dollar_volume,volume_dry_up_ratio,score
+AIT,314.36,72.3,20.9,4,"10.1, 8.6, 5.3, 3.9",317.1,0.9,85487166.0,0.77,59.3
+ABCB,83.93,66.0,17.0,3,"4.2, 3.2, 3.1",87.99,4.6,43659412.0,0.62,54.8
+AGNC,10.65,64.4,16.1,2,"10.7, 4.0",11.07,3.7,179089310.0,0.7,50.5
+ACA,129.54,73.4,26.4,4,"21.9, 11.0, 7.9, 4.8",135.58,4.5,36196739.0,1.01,45.8

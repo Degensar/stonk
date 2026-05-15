@@ -1,0 +1,3 @@
+ticker,close,rs_rank,base_depth_pct,contraction_count,contractions_pct,pivot_price,pivot_distance_pct,avg_dollar_volume,volume_dry_up_ratio,score
+CM,111.51,80.8,19.4,4,"6.4, 6.2, 3.1, 3.4",113.28,1.6,151838361.0,0.63,71.9
+AVGO,434.4,83.6,34.1,4,"12.6, 11.2, 8.1, 7.2",439.73,1.2,8708914262.0,0.74,54.4
